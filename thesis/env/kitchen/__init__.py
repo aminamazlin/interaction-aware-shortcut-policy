@@ -1,0 +1,2 @@
+"""Kitchen compatibility namespace."""
+
