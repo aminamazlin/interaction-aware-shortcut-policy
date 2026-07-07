@@ -1,0 +1,68 @@
+name: coffee_prep_image
+
+shape_meta: &shape_meta
+  obs:
+    agentview_image:
+      shape: [3, 84, 84]
+      type: rgb
+    robot0_eye_in_hand_image:
+      shape: [3, 84, 84]
+      type: rgb
+    robot0_eef_pos:
+      shape: [3]
+      type: low_dim
+    robot0_eef_quat:
+      shape: [4]
+      type: low_dim
+    robot0_gripper_qpos:
+      shape: [2]
+      type: low_dim
+  action:
+    shape: [7]
+
+action_dim: 7
+dataset_path: &dataset_path ${oc.env:PROJECT_STORAGE_ROOT,/gpfs/work5/0/prjs2121/amazlin/bachelor-thesis}/training_data/coffee_prep/demo_image.hdf5
+abs_action: &abs_action false
+
+env_runner:
+  _target_: thesis.env.runners.mimicgen_runner.MimicGenImageRunner
+  dataset_path: *dataset_path
+  task_name: CoffeePreparation_D0
+  obs_keys:
+    - agentview_image
+    - robot0_eye_in_hand_image
+    - robot0_eef_pos
+    - robot0_eef_quat
+    - robot0_gripper_qpos
+  n_train: 6
+  n_train_vis: 2
+  train_start_seed: 0
+  n_test: 50
+  n_test_vis: 4
+  test_start_seed: 100000
+  max_steps: 1000
+  n_obs_steps: ${n_obs_steps}
+  n_action_steps: ${n_action_steps}
+  n_latency_steps: ${n_latency_steps}
+  render_hw: [128, 128]
+  fps: 10
+  crf: 22
+  past_action: ${past_action_visible}
+  abs_action: *abs_action
+  n_envs: 4
+  image_size: [84, 84]
+
+dataset:
+  _target_: thesis.dataset.mimicgen_image_dataset.MimicGenImageDataset
+  dataset_path: *dataset_path
+  shape_meta: *shape_meta
+  horizon: ${horizon}
+  n_obs_steps: ${n_obs_steps}
+  n_action_steps: ${n_action_steps}
+  pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  seed: 42
+  val_ratio: 0.02
+  max_train_episodes: null
+  use_cache: true
+  cache_zarr_path: ${oc.env:PROJECT_STORAGE_ROOT,/gpfs/work5/0/prjs2121/amazlin/bachelor-thesis}/training_data/coffee_prep/demo_image_proprio.hdf5.zarr

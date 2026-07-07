@@ -1,0 +1,51 @@
+name: franka_kitchen_lowdim
+
+# Franka Kitchen low-dimensional observation used by diffusion-policy:
+#   qpos[:9]                  9
+#   qpos[-21:]               21
+#   zero placeholder/context  30
+#   ---------------------------
+#   total                    60
+obs_dim: 60
+
+# Absolute action control for Franka Kitchen uses 9 actuator commands.
+action_dim: 9
+keypoint_dim: 3
+
+dataset_dir: &dataset_dir ${oc.env:PROJECT_STORAGE_ROOT,/gpfs/work5/0/prjs2121/amazlin/bachelor-thesis}/training_data/kitchen
+demo_dataset_dir: &demo_dataset_dir ${oc.env:PROJECT_STORAGE_ROOT,/gpfs/work5/0/prjs2121/amazlin/bachelor-thesis}/training_data/kitchen/kitchen_demos_multitask
+
+abs_action: &abs_action true
+robot_noise_ratio: &robot_noise_ratio 0.1
+
+env_runner:
+  _target_: env.runners.franka_kitchen_runner.FrankaKitchenLowdimRunner
+  dataset_dir: *dataset_dir
+  n_train: 6
+  n_train_vis: 2
+  train_start_seed: 0
+  n_test: 50
+  n_test_vis: 4
+  test_start_seed: 100000
+  max_steps: 280
+  n_obs_steps: ${n_obs_steps}
+  n_action_steps: ${n_action_steps}
+  render_hw: [512, 512]
+  fps: 12.5
+  past_action: ${past_action_visible}
+  abs_action: *abs_action
+  robot_noise_ratio: *robot_noise_ratio
+  n_envs: null
+  use_async_env: true
+  vector_env_context: spawn
+
+dataset:
+  _target_: dataset.franka_kitchen_dataset.FrankaKitchenMjlLowdimDataset
+  dataset_dir: *demo_dataset_dir
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  abs_action: *abs_action
+  robot_noise_ratio: *robot_noise_ratio
+  seed: 42
+  val_ratio: 0.02
