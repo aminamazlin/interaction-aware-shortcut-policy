@@ -1,0 +1,100 @@
+defaults:
+  - _self_
+  - task: pick_place_lowdim
+
+model_name: onedp
+_target_: thesis.workspace.onedp_workspace.OneDPWorkspace
+
+workspace:
+  _target_: thesis.workspace.onedp_workspace.OneDPWorkspace
+
+name: train_onedp_lowdim
+task_name: ${task.name}
+exp_name: default
+
+teacher_checkpoint: /gpfs/work5/0/prjs2121/amazlin/bachelor-thesis/outputs/2026.06.26/00.23.43_train_diffusion_unet_lowdim_ddim_mimicgen_pick_place_d0_lowdim/checkpoints/epoch=0460-test_mean_score=0.795.ckpt
+output_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+
+variant: deterministic
+
+noise_scheduler:
+  _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+  num_train_timesteps: 100
+  beta_start: 0.0001
+  beta_end: 0.02
+  beta_schedule: squaredcos_cap_v2
+  variance_type: fixed_small
+  clip_sample: true
+  prediction_type: epsilon
+
+horizon: 16
+n_obs_steps: 4
+n_action_steps: 8
+n_latency_steps: 0
+past_action_visible: false
+
+distillation:
+  t_init: 65
+  t_min: 2
+  t_max: 95
+
+optimizer:
+  generator_lr: 1.0e-6
+  score_lr: 2.0e-5
+  betas: [0.0, 0.999]
+  max_grad_norm: 10.0
+
+training:
+  device: cuda:0
+  seed: 42
+  cuda_debug: false
+  resume_from_checkpoint: null
+  num_epochs: 100
+  save_every: 10
+  eval_every: 10
+  val_every: 1
+  max_train_steps: null
+  inference_time_every: 10
+  inference_time_warmup_steps: 5
+  inference_time_steps: 20
+
+dataloader:
+  batch_size: 1024
+  num_workers: 8
+  shuffle: true
+  pin_memory: true
+  persistent_workers: true
+  drop_last: false
+  pad_last_batch: false
+
+val_dataloader:
+  batch_size: 1024
+  num_workers: 0
+  shuffle: false
+  pin_memory: true
+  persistent_workers: false
+
+logging:
+  project: experiment_tasks
+  resume: false
+  mode: online
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  tags: ["onedp", "${task_name}", "${exp_name}"]
+  id: null
+  group: null
+
+checkpoint:
+  topk:
+    monitor_key: test_mean_score
+    mode: max
+    k: 5
+    format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
+
+hydra:
+  job:
+    override_dirname: ${name}
+  run:
+    dir: ${output_dir}
+  sweep:
+    dir: ${output_dir}
+    subdir: ${hydra.job.num}
